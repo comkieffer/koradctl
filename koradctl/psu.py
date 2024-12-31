@@ -1,3 +1,6 @@
+
+import re
+
 from time import sleep
 from datetime import datetime
 from typing import Union, Tuple
@@ -17,8 +20,16 @@ from koradctl.pretty import Status, Reading
 # we impose a gap of at least ~50ms between commands
 INTER_COMMAND_DELAY = 0.05
 
+# Firmwares that have been tested with this library.
+#
+# Before adding a new firmware here, run `test.py` against it to make sure that it is
+# fully supported.
+#
+# If the power supply reports a serial number in its answer to `get_identity`, capture
+# it is a regex group so that `get_serial_number` can return it.
 tested_firmware = [
     'TENMA 72-2540 V2.1',
+    re.compile(r'^TENMA 72-2540 V5.8 SN:(?P<serial_number>\d+)$'),
 ]
 
 class PowerSupply:
@@ -88,6 +99,20 @@ class PowerSupply:
         """
         return self.issue_command_trim('*IDN?', allow_retry=True).decode('ascii')
 
+    def get_serial_number(self) -> str | None:
+        """
+        get the power supply's serial number if possible, otherwise return None.
+        """
+
+        identity = self.get_identity()
+        for version in tested_firmware:
+            # We can only extract the serial number if the version is a regex.
+            if isinstance(version, re.Pattern):
+                if match := version.fullmatch(identity):
+                    return match.group('serial_number')
+
+        return None
+
     def is_tested(self) -> bool:
         """
         check whether the connected power supply has been tested against
@@ -96,7 +121,17 @@ class PowerSupply:
         list
         """
         identity = self.get_identity()
-        return identity in tested_firmware
+        for version in tested_firmware:
+            if isinstance(version, re.Pattern):
+                if version.fullmatch(identity):
+                    return True
+            elif isinstance(version, str):
+                if version == identity:
+                    return True
+            else:
+                raise ValueError("Unsupported type in 'tested_firmware'.")
+
+        return False
 
 
     def get_status(self) -> Status:
