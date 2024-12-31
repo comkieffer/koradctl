@@ -14,6 +14,14 @@ Please let me know if you have successfully used `koradctl` with other power sup
 pip install koradctl
 ```
 
+Or, with poetry
+
+```commandline
+poetry source add --priority=explicit hyperion-gitlab \
+    https://gitlab.hyperion.space/api/v4/groups/20/-/packages/pypi/simple
+poetry add --source hyperion-gitlab koradctl
+```
+
 ## Usage
 
 ```bash
@@ -64,11 +72,29 @@ koradctl --help
 
 ## Development Setup
 
+Create a new virtual environment for development with
+
 ```bash
 virtualenv -p python3 venv
 . venv/bin/activate
 ./setup.py develop
 ```
+
+To make a new release, update the version in the `setup.py`. Then build the package and upload it.
+
+```console
+# Make sure that you have updated the setup.py first!
+
+$ python setup.py sdist
+$ twine upload \
+      --repository-url 'https://gitlab.hyperion.space/api/v4/projects/256/packages/pypi' \
+      --username gl-access-token \
+      --password YOUR_TOKEN \
+      --verbose \
+      dist/*
+```
+
+When our changes are merged upstream, we can deprecate this package.
 
 ## Todo
 
