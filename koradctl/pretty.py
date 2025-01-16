@@ -27,6 +27,9 @@ class Reading(NamedTuple):
     value: float
     units: str
 
+    def __str__(self) -> str:
+        return f"{self.value} {self.units}"
+
 def pretty_reading(response: Union[bytes, float], units: str = '?'):
     return Reading(
         value = round(float(response), 3),
