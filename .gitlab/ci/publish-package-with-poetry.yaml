@@ -1,0 +1,35 @@
+# Publish Package with Poetry
+#
+# Publish a Python package to the Gitlab registry for this project using PyPoetry.
+# This job is configured to only run on tag pipelines for tags that look like versions.
+#
+# Usage
+# -----
+#
+# To run this job, include it into you main .gitlab-ci.yml
+#
+#   include:
+#     - .gitlab/ci/publish-package-with-poetry.yaml
+#
+#   publish-package-with-poetry:
+#     needs: [test-aht-deploy-configs]
+#
+# If you are using `poetry-dynamic-versioning` or any other system that tags
+# the package based on tags, make sure to only run in tag pipelines. You cannot
+# overwrite an existing package so pushing the same version twice causes the
+# pipeline to fail.
+---
+publish-package-with-poetry:
+  image: registry.hyperion.space/hyperion/build-tools/code-quality-tools/pre-commit
+
+  script:
+    # The pre-commit image can access all the packages under the Hyperion/
+    # group. This allows it to download dependencies this package might need.
+    - poetry config repositories.gitlab_registry \
+        https://gitlab.hyperion.space/api/v4/projects/${CI_PROJECT_ID}/packages/pypi
+    - poetry config http-basic.gitlab_registry gitlab-ci-token $CI_JOB_TOKEN
+    - poetry install
+    - poetry publish --build --repository gitlab_registry
+
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v?\\d+\\.\\d+\\.\\d+(-.+)?$/"

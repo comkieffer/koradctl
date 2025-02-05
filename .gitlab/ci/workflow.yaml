@@ -1,0 +1,26 @@
+---
+# Avoid duplicate pipelines when using both branch and merge request pipelines.
+#
+# If a job has a `rules` section, a single push can trigger two different
+# pipelines: a branch pipeline and a merge request pipeline.
+#
+# To avoid duplicate pipelines, we create a workflow rule that disables branch
+# pipelines on branches that have an associated merge request.
+#
+# The `CI_COMMIT_BRANCH` variable is set in branch pipelines (including
+# pipelines for the default branch) but not in merge request or tag
+# pipelines.
+#
+# The `CI_OPEN_MERGE_REQUESTS` variable contains the merge requests that use
+# the current branch. It is only available in branch and merge request
+# pipelines.
+#
+# The following workflow rule disables branch pipelines on push whenever a
+# merge request for the branch exists. It is still possible to run the branch
+# pipelines from the Gitlab Web UI though.
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+      when: never
+    - when: always

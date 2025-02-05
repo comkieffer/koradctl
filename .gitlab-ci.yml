@@ -1,0 +1,12 @@
+---
+include:
+  - .gitlab/ci/workflow.yaml
+  - .gitlab/ci/check-with-pre-commit.yaml
+  - .gitlab/ci/publish-package-with-poetry.yaml
+  - .gitlab/ci/make-release-with-gitlab.yaml
+
+publish-package-with-poetry:
+  needs: [check-with-pre-commit]
+
+make-release-with-gitlab:
+  needs: [publish-package-with-poetry]

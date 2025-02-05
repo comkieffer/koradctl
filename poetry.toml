@@ -1,0 +1,3 @@
+[virtualenvs]
+# Create the virtual environment in this directory instead of in ~/.cache
+in-project = true

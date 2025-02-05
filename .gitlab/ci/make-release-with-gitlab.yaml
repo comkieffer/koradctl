@@ -1,0 +1,52 @@
+# Create a Release on Gitlab
+#
+# When we need to _release_ software, we usually create a new tag in the repository,
+# grab the build artifacts, and deploy them to our hardware. This process is black magic
+# to non-software people: given a tag, they do not have an easy way of finding the
+# associated binaries.
+#
+# A _Release_ is a solution to this. When we create a _Release_ for a specific tag, a
+# new entry is added to the _Releases_ page on the repository. This entry contains a
+# description, a changelog, and links to any useful artifacts.
+#
+# Non-software people can go to the releases page and download the binaries for the
+# software version that they are interested in without having to navigate tags and
+# pipelines.
+#
+# Usage
+# -----
+#
+# ```yaml
+# ---
+# include:
+#   - .gitlab/ci/make-release-with-gitlab.yaml
+#
+# make-release:
+#   needs: [ YOUR_PIPELINE_BUILD_JOBS_HERE ]
+# ```
+#
+# The job should be configured to run last otherwise you might create releases for
+# failing pipelines.
+#
+## When you push a tag that looks like a version number, the job will create a _Release_
+# and use the tag message as the description of the release. It will not create a
+# release for pre-release tags.
+#
+---
+make-release-with-gitlab:
+  image:
+    name: registry.hyperion.space/hyperion/build-tools/code-quality-tools/gitlab-release:latest
+    entrypoint: [""]
+
+  script:
+    - echo "Creating release ..."
+    - git show --format=%b -s $CI_COMMIT_TAG > release_description.md
+
+  release:
+    name: "Release $CI_COMMIT_TAG"
+    description: release_description.md
+    tag_name: "$CI_COMMIT_TAG"
+    ref: "$CI_COMMIT_SHA"
+
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v?\\d+\\.\\d+\\.\\d+(-.+)?$/"

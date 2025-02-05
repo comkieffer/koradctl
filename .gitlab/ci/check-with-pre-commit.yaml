@@ -1,0 +1,77 @@
+# Check With Pre-Commit
+#
+# This stage will run `pre-commit` on your code.
+#
+# For performance, the pre-commit cache (where all the tools are installed) is
+# cached between runs.
+#
+# Python Support
+# --------------
+#
+# The pre-commit job has some logic to conditionally detect the presence of a
+# `pyproject.toml` file and set-up poetry if it finds one.
+#
+# Initially, this logic was in this content was injected as `before_script` and
+# `after_script` blocks. However, failures in `after_script` do not fail the pipeline.
+# That meant that pytest failures would not fail the job which was not ideal ...
+#
+# A solution would have been to run the tests in another job (that would be cleaner) but
+# we would then pay the start-up cost of another container which would slow the CI down.
+#
+# As a work-around we patch the pre-commit job to add support for Python
+#
+---
+check-with-pre-commit:
+  image:
+    name: registry.hyperion.space/hyperion/build-tools/code-quality-tools/pre-commit:latest
+
+  variables:
+    # Location of the pre-commit cache, used to cache the pre-commit environment
+    # between runs.
+    PRE_COMMIT_HOME: $CI_PROJECT_DIR/.cache/pre-commit
+
+  script:
+      # If we think that we are in a Python project, then do poetry things
+    - |
+      if [ -f "pyproject.toml" ]; then
+          poetry install --with dev
+      fi
+
+    # Remove potential broken hooks with `gc` before we re-install them with
+    # the `install-hooks` command.
+    - pre-commit gc
+    - pre-commit install-hooks
+    - pre-commit run --all-files --show-diff-on-failure
+
+    - |
+      if [ -f "pyproject.toml" ]; then
+        poetry run pytest \
+            --junit-xml=junit.xml \
+            --cov=aht.protocol --cov-report term --cov-report=xml --cov-branch
+      fi
+
+  # Extract the coverage percentage from the logs to show in MR UI
+  # yamllint disable-line rule:quoted-strings
+  coverage: '/(?i)total.*? (100(?:\.0)?\%|[1-9]?\d(?:\.\d)?\%)$/'
+
+  artifacts:
+    # Save the coverage report so that the MR UI can show which lines of the MR are
+    # covered by the tests and which ones are not.
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+  cache:
+    # Try to cache the pre-commit environment so that we don't re-download it
+    # every time we run the CI. Path is relative to $CI_PROJECT_DIR.
+    # Only re-use the cache if the pre-commit config has not changed.
+    - key:
+        files: [".pre-commit-config.yaml"]
+      paths: ["${PRE_COMMIT_HOME}"]
+    # Cache the virtual env so that we don't have to re-download and install
+    # the packages if the lockfile has not changed.
+    - key:
+        files: ["poetry.lock"]
+      paths: [".venv"]

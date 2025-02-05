@@ -1,0 +1,28 @@
+---
+extends: default
+
+yaml-files:
+  - "*.yaml"
+  - "*.yml"
+  - ".yamllint"
+  - ".gitlab-ci"
+
+rules:
+  comments:
+    min-spaces-from-content: 2
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  line-length:
+    max: 100
+    allow-non-breakable-words: true
+
+  quoted-strings:
+    quote-type: "double"
+    required: false
+
+  truthy:
+    allowed-values: ["true", "false", "yes", "no"]
+    check-keys: true
