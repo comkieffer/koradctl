@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Union
 from typing import NamedTuple
+
 
 class Status(NamedTuple):
     output_enabled: bool
@@ -19,9 +19,11 @@ class Status(NamedTuple):
             cc_active=bool(~status_byte & 0x01),
         )
 
+
 def pretty_status(response: bytes) -> Status:
     status_byte = response[0]
     return Status.from_status_byte(status_byte)
+
 
 class Reading(NamedTuple):
     value: float
@@ -30,8 +32,6 @@ class Reading(NamedTuple):
     def __str__(self) -> str:
         return f"{self.value} {self.units}"
 
-def pretty_reading(response: Union[bytes, float], units: str = '?'):
-    return Reading(
-        value = round(float(response), 3),
-        units = units
-    )
+
+def pretty_reading(response: bytes | float, units: str = "?") -> Reading:
+    return Reading(value=round(float(response), 3), units=units)

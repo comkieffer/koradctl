@@ -47,28 +47,28 @@ koradctl --help
 ## Power Supply API
 
 - Misc
-    - `get_identity()`
-    - `is_tested()`
-    - `get_status()`
+  - `get_identity()`
+  - `is_tested()`
+  - `get_status()`
 - Output State
-    - `get_output_state()`
-    - `set_output_state(enabled)`
+  - `get_output_state()`
+  - `set_output_state(enabled)`
 - Voltage and Over Current Protection
-    - `get_ovp_ocp_state()`
-    - `set_ocp_state(enabled)`
-    - `set_ovp_state(enabled)`
+  - `get_ovp_ocp_state()`
+  - `set_ocp_state(enabled)`
+  - `set_ovp_state(enabled)`
 - Setpoint Control
-    - Voltage
-        - `get_voltage_setpoint()`
-        - `set_voltage_setpoint(voltage)`
-    - Current
-        - `get_current_setpoint()`
-        - `set_current_setpoint(current)`
+  - Voltage
+    - `get_voltage_setpoint()`
+    - `set_voltage_setpoint(voltage)`
+  - Current
+    - `get_current_setpoint()`
+    - `set_current_setpoint(current)`
 - Output Readings
-    - `get_output_voltage()`
-    - `get_output_current()`
-    - `get_output_power()`
-    - `get_output_readings()`
+  - `get_output_voltage()`
+  - `get_output_current()`
+  - `get_output_power()`
+  - `get_output_readings()`
 
 ## Development Setup
 
@@ -99,6 +99,6 @@ When our changes are merged upstream, we can deprecate this package.
 ## Todo
 
 - Local configuration file
-    - Default Voltage / Current setpoint
-    - Voltage / Current limits
-    - Monitor interval
+  - Default Voltage / Current setpoint
+  - Voltage / Current limits
+  - Monitor interval

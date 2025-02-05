@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+import sys
 from time import sleep
+
 from serial.serialutil import SerialException
 
 import koradctl
@@ -12,7 +14,7 @@ basic example script
 - enable over-current protection after 250ms
 """
 
-port = koradctl.get_port('/dev/ttyACM0')
+port = koradctl.get_port("/dev/ttyACM0")
 psu = koradctl.PowerSupply(port)
 
 # disable OCP / OVP
@@ -34,7 +36,7 @@ try:
     # log power usage at ~1Hz
     while True:
         v, i, p = psu.get_output_readings()
-        print('%2.2fv    %1.3fA    %2.2fW' % ( v.value, i.value, p.value ))
+        print(f"{v.value:2.2f}v    {i.value:1.3f}A    {p.value:2.2f}W")
 
         if not psu.get_output_state():
             # if the output is no longer enabled, then exit
@@ -45,6 +47,6 @@ try:
 except KeyboardInterrupt:
     pass
 except SerialException:
-    print('ERROR: The power supply appears to have gone away...', file=sys.stderr)
+    print("ERROR: The power supply appears to have gone away...", file=sys.stderr)
 finally:
     psu.set_output_state(False)

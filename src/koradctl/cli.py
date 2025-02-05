@@ -1,5 +1,10 @@
+import importlib.metadata
+import importlib.util
+import pathlib
 import sys
 from time import sleep
+from typing import NoReturn
+
 from serial.serialutil import SerialException
 
 from koradctl.args import get_args
@@ -7,24 +12,46 @@ from koradctl.port import get_port
 from koradctl.psu import PowerSupply
 from koradctl.test import TestSuite
 
+
+def get_package_name() -> str | None:
+    file_dir = pathlib.Path(__file__).parent
+    spec = importlib.util.spec_from_file_location(
+        "module.name", file_dir / "__init__.py"
+    )
+
+    if spec is None:
+        return None
+
+    module = importlib.util.module_from_spec(spec)
+
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module.__package__
+
+
+def get_package_version(package_name: str) -> str:
+    return importlib.metadata.version(package_name)
+
+
 class Cli:
-    def __init__(self):
+    def __init__(self) -> None:
         self.args = get_args()
 
         if self.args.show_version:
-            import koradctl.package as me
-            print('%s version %s' % ( me.proj_name, me.version ))
-            exit(0)
+            me = get_package_name()
+            ver = get_package_version(me) if me else "Unknown"
+            print(f"{me} version {get_package_version(ver)}")
+            sys.exit(0)
 
         try:
             self.port = get_port(self.args.port, self.args.baudrate)
         except SerialException:
-            print('ERROR: Failed to connect to the power supply...', file=sys.stderr)
-            exit(0)
+            print("ERROR: Failed to connect to the power supply...", file=sys.stderr)
+            sys.exit(0)
 
         self.psu = PowerSupply(self.port)
 
-    def run(self):
+    def run(self) -> None:
         if self.args.test:
             self.run_tests()
         elif self.args.identify:
@@ -39,54 +66,59 @@ class Cli:
         else:
             self.run_noninteractive()
 
-    def run_tests(self):
+    def run_tests(self) -> None:
         t = TestSuite(self.psu)
         t.run()
 
-    def run_interactive(self):
-        raise NotImplementedError()
+    def run_interactive(self) -> NoReturn:
+        raise NotImplementedError
 
-    def run_noninteractive(self):
+    def run_noninteractive(self) -> None:  # noqa: C901, PLR0912
         if not self.psu.is_tested():
-            print('WARNING: this power supply is not fully tested', file=sys.stderr)
+            print("WARNING: this power supply is not fully tested", file=sys.stderr)
 
         if self.args.over_current_protection is not None:
             self.psu.set_ocp_state(self.args.over_current_protection)
-            print('OCP:     request: %-5s' % (
-                'On' if self.args.over_current_protection else 'Off',
-            ))
+            print(
+                "OCP:     request: %-5s"
+                % ("On" if self.args.over_current_protection else "Off",)
+            )
 
         if self.args.over_voltage_protection is not None:
             self.psu.set_ovp_state(self.args.over_voltage_protection)
-            print('OVP:     request: %-5s' % (
-                'On' if self.args.over_voltage_protection else 'Off',
-            ))
+            print(
+                "OVP:     request: %-5s"
+                % ("On" if self.args.over_voltage_protection else "Off",)
+            )
 
         if self.args.voltage is not None:
             self.psu.set_voltage_setpoint(self.args.voltage)
-            print('Voltage: request: %2.2f, result: %2.2f' % (
-                self.args.voltage,
-                self.psu.get_voltage_setpoint().value,
-            ))
+            print(
+                f"Voltage: request: {self.args.voltage:2.2f}, "
+                f"result: {self.psu.get_voltage_setpoint().value:2.2f}"
+            )
 
         if self.args.current is not None:
             self.psu.set_current_setpoint(self.args.current)
-            print('Current: request: %1.3f, result: %1.3f' % (
-                self.args.current,
-                self.psu.get_current_setpoint().value,
-            ))
+            print(
+                f"Current: request: {self.args.current:1.3f}, "
+                f"result: {self.psu.get_current_setpoint().value:1.3f}"
+            )
 
         if self.args.output_enable is not None:
-            if self.args.output_enable == 'toggle':
+            if self.args.output_enable == "toggle":
                 new_state = not self.psu.get_output_state()
             else:
                 new_state = self.args.output_enable
 
             self.psu.set_output_state(new_state)
-            print('Enable:  request: %-5s, result: %-5s' % (
-                'On' if new_state else 'Off',
-                'On' if self.psu.get_output_state() else 'Off',
-            ))
+            print(
+                "Enable:  request: %-5s, result: %-5s"
+                % (
+                    "On" if new_state else "Off",
+                    "On" if self.psu.get_output_state() else "Off",
+                )
+            )
 
         if self.args.monitor or self.args.monitor_loop:
             self.print_output_readings()
@@ -97,17 +129,18 @@ class Cli:
                     sleep(self.args.monitor_freq)
                     self.print_output_readings()
             except KeyboardInterrupt:
-                print('') # this puts the terminal's ^C on a line by itself
+                print()  # this puts the terminal's ^C on a line by itself
 
         if self.args.off_on_exit:
             self.psu.set_output_state(False)
-            print('Enable:  request: %-5s, result: %-5s' % (
-                'Off',
-                'On' if self.psu.get_output_state() else 'Off',
-            ))
+            print(
+                "Enable:  request: %-5s, result: %-5s"
+                % (
+                    "Off",
+                    "On" if self.psu.get_output_state() else "Off",
+                )
+            )
 
-    def print_output_readings(self):
+    def print_output_readings(self) -> None:
         v, i, p = self.psu.get_output_readings()
-        print('Output: %2.2f v, %1.3f A, %2.2f W' % (
-            v.value, i.value, p.value
-        ))
+        print(f"Output: {v.value:2.2f} v, {i.value:1.3f} A, {p.value:2.2f} W")

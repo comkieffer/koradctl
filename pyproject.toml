@@ -37,10 +37,88 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry]
-packages = [{include = "koradctl"}]
+packages = [{include = "koradctl", from = "src"}]
 
 [tool.poetry.scripts]
 koradctl = "koradctl.__main__:cli"
 
 [tool.poetry-dynamic-versioning]
 enable = true
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+mypy = "^1.13.0"
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+
+[tool.mypy]
+mypy_path = "src/"
+# Top-level packages will be based in either the current directory, PYTHONPATH,
+# or mypy_path. This helps mypy understand our package layout (and not get
+# confused by the fact that the `aht` package is a namespace package.
+explicit_package_bases = true
+# Do not type-check test code
+exclude = "(?x)(test/)"
+pretty = true
+install_types = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[tool.ruff.lint]
+select = [ "ALL" ]
+ignore = [
+    "ANN10",    # Ignore missing annotation for `cls` and `self` parameters
+    "ANN401",   # Allow usage of `typing.Any`
+    "COM812",   # Do not require trailing commas
+    "D10",      # Do not require everything to have a docstring
+    "D203",     # No empty lines between docstring and class
+    "D212",     # Keep the opening quotes of a docstring on their own line
+    "DTZ",      # Allow datetime objects without timezones
+    "EM",       # Allow string literals in exception constructors
+    "FIX",      # Allow Fixme comments
+    "G004",     # Allow f-strings in logging statements
+    "PLR2004",  # Allow magic numbers
+    "PLW1510",  # subprocess.run without `check` argument - too may false positives
+    "PT011",    # Allow broad `pytest.raises` statements
+    "RET504",   # Allow assignment immediately before a return
+    "S101",     # Allow `assert`
+    "S603",     # Allow subprocess.run
+    "S607",     # Allow non-absolute binary paths in subprocess.run
+    "TD",       # Allow TODO comments
+    "TRY003",   # Allow long custom exception messages
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "ANN",  # Do not require type annotations in test code
+]
+"example*.py" = [ "UP031", ]   # Allow old-fashioned format strings
+"src/koradctl/cli.py" = [ "UP031", ]   # Allow old-fashioned format strings
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+section-order = ["future", "standard-library", "rich", "third-party", "first-party", "local-folder"]
+known-first-party = ["aht"]
+
+[tool.ruff.lint.isort.sections]
+rich = ["rich"]
+
+[tool.coverage.run]
+omit = [
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
