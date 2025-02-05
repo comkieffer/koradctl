@@ -1,10 +1,11 @@
 import re
 from datetime import datetime
+from functools import cached_property
 from time import sleep
+from typing import NamedTuple
 
 from serial import Serial
-
-from koradctl.pretty import Reading, Status, pretty_reading, pretty_status
+from typing_extensions import Self
 
 # i used the sigrok page for reference:
 #     https://sigrok.org/wiki/Korad_KAxxxxP_series
@@ -28,6 +29,37 @@ tested_firmware = [
     "TENMA 72-2540 V2.1",
     re.compile(r"^TENMA 72-2540 V5.8 SN:(?P<serial_number>\d+)$"),
 ]
+
+
+class Status(NamedTuple):
+    output_enabled: bool
+    ovp_ocp_enabled: bool
+    cv_active: bool
+    cc_active: bool
+
+    @classmethod
+    def from_bytes(cls: type[Self], status_byte: bytes | int) -> Self:
+        if isinstance(status_byte, bytes | bytearray):
+            if len(status_byte) != 1:
+                raise ValueError("Data must be exactly one byte")
+
+            status_byte = status_byte[0]
+
+        assert 0 <= status_byte <= 255
+        return cls(
+            output_enabled=bool(status_byte & 0x40),
+            ovp_ocp_enabled=bool(status_byte & 0x80),
+            cv_active=bool(status_byte & 0x01),
+            cc_active=bool(~status_byte & 0x01),
+        )
+
+
+class Reading(NamedTuple):
+    value: float
+    units: str
+
+    def __str__(self) -> str:
+        return f"{self.value:.3f} {self.units}"
 
 
 class PowerSupply:
@@ -115,6 +147,14 @@ class PowerSupply:
 
         return response.rstrip(trim_chars)
 
+    # region Properties
+
+    @cached_property
+    def identity(self) -> str:
+        return self.get_identity()
+
+    # endregion
+
     def get_identity(self) -> str:
         """Get the power supply's identity string, e.g: "TENMA 72-2540 V2.1"."""
         response = self.issue_command_trim("*IDN?", allow_retry=True)
@@ -144,13 +184,12 @@ class PowerSupply:
         all commands and responses before adding to the tested_firmware
         list.
         """
-        identity = self.get_identity()
         for version in tested_firmware:
             if isinstance(version, re.Pattern):
-                if version.fullmatch(identity):
+                if version.fullmatch(self.identity):
                     return True
             elif isinstance(version, str):
-                if version == identity:
+                if version == self.identity:
                     return True
             else:
                 raise TypeError("Unsupported type in 'tested_firmware'.")
@@ -162,21 +201,27 @@ class PowerSupply:
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
-        return pretty_status(response)
+        return Status.from_bytes(response)
 
-    def get_output_state(self) -> bool:
+    def is_output_enabled(self) -> bool:
         return self.get_status().output_enabled
 
-    def set_output_state(self, enabled: bool) -> None:  # noqa: FBT001
+    def enable_output(self) -> None:
+        self.set_output_state(enabled=True)
+
+    def disable_output(self) -> None:
+        self.set_output_state(enabled=False)
+
+    def set_output_state(self, *, enabled: bool) -> None:
         self.issue_command("OUT1" if enabled else "OUT0", wait_for_response=False)
 
     def get_ovp_ocp_state(self) -> bool:
         return self.get_status().ovp_ocp_enabled
 
-    def set_ocp_state(self, enabled: bool) -> None:  # noqa: FBT001
+    def set_ocp_state(self, *, enabled: bool) -> None:
         self.issue_command("OCP1" if enabled else "OCP0", wait_for_response=False)
 
-    def set_ovp_state(self, enabled: bool) -> None:  # noqa: FBT001
+    def set_ovp_state(self, *, enabled: bool) -> None:
         self.issue_command("OVP1" if enabled else "OVP0", wait_for_response=False)
 
     def get_voltage_setpoint(self) -> Reading:
@@ -184,7 +229,7 @@ class PowerSupply:
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
-        return pretty_reading(response, "V")
+        return Reading(float(response), "V")
 
     def set_voltage_setpoint(self, voltage: float) -> None:
         self.issue_command(f"VSET1:{voltage:2.2f}", wait_for_response=False)
@@ -194,7 +239,7 @@ class PowerSupply:
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
-        return pretty_reading(response, "I")
+        return Reading(float(response), "I")
 
     def set_current_setpoint(self, current: float) -> None:
         self.issue_command(f"ISET1:{current:1.3f}", wait_for_response=False)
@@ -204,14 +249,14 @@ class PowerSupply:
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
-        return pretty_reading(response, "V")
+        return Reading(float(response), "V")
 
     def get_output_current(self) -> Reading:
         response = self.issue_command_trim("IOUT1?", allow_retry=True)
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
-        return pretty_reading(response, "I")
+        return Reading(float(response), "I")
 
     def get_output_power(self) -> Reading:
         return self.get_output_readings()[2]
@@ -219,5 +264,5 @@ class PowerSupply:
     def get_output_readings(self) -> tuple[Reading, Reading, Reading]:
         v = self.get_output_voltage()
         i = self.get_output_current()
-        p = pretty_reading(i.value * v.value, "W")
+        p = Reading(i.value * v.value, "W")
         return v, i, p

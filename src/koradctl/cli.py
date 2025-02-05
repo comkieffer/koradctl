@@ -78,14 +78,14 @@ class Cli:
             print("WARNING: this power supply is not fully tested", file=sys.stderr)
 
         if self.args.over_current_protection is not None:
-            self.psu.set_ocp_state(self.args.over_current_protection)
+            self.psu.set_ocp_state(enabled=self.args.over_current_protection)
             print(
                 "OCP:     request: %-5s"
                 % ("On" if self.args.over_current_protection else "Off",)
             )
 
         if self.args.over_voltage_protection is not None:
-            self.psu.set_ovp_state(self.args.over_voltage_protection)
+            self.psu.set_ovp_state(enabled=self.args.over_voltage_protection)
             print(
                 "OVP:     request: %-5s"
                 % ("On" if self.args.over_voltage_protection else "Off",)
@@ -107,16 +107,16 @@ class Cli:
 
         if self.args.output_enable is not None:
             if self.args.output_enable == "toggle":
-                new_state = not self.psu.get_output_state()
+                new_state = not self.psu.is_output_enabled()
             else:
                 new_state = self.args.output_enable
 
-            self.psu.set_output_state(new_state)
+            self.psu.set_output_state(enabled=new_state)
             print(
                 "Enable:  request: %-5s, result: %-5s"
                 % (
                     "On" if new_state else "Off",
-                    "On" if self.psu.get_output_state() else "Off",
+                    "On" if self.psu.is_output_enabled() else "Off",
                 )
             )
 
@@ -132,12 +132,12 @@ class Cli:
                 print()  # this puts the terminal's ^C on a line by itself
 
         if self.args.off_on_exit:
-            self.psu.set_output_state(False)
+            self.psu.set_output_state(enabled=False)
             print(
                 "Enable:  request: %-5s, result: %-5s"
                 % (
                     "Off",
-                    "On" if self.psu.get_output_state() else "Off",
+                    "On" if self.psu.is_output_enabled() else "Off",
                 )
             )
 

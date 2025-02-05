@@ -47,7 +47,7 @@ class TestSuite:
         try:
             self._run(allow_untested=allow_untested)
         except:
-            self.psu.set_output_state(False)
+            self.psu.set_output_state(enabled=False)
             raise
 
     def _run(self, *, allow_untested: bool = False) -> None:  # noqa: PLR0915
@@ -57,8 +57,8 @@ class TestSuite:
             assert self.psu.is_tested()
 
         print("--- disable output")
-        self.psu.set_output_state(False)
-        assert self.psu.get_output_state() is False
+        self.psu.set_output_state(enabled=False)
+        assert not self.psu.is_output_enabled()
 
         print(f"--- setup output voltage = {self.TEST_VOLTAGE:2.2f} V")
         self.psu.set_voltage_setpoint(self.TEST_VOLTAGE)
@@ -69,55 +69,55 @@ class TestSuite:
         assert self.psu.get_current_setpoint().value == self.TEST_CURRENT_HI
 
         print("--- enable neither OVP or OCP")
-        self.psu.set_ovp_state(False)
-        self.psu.set_ocp_state(False)
+        self.psu.set_ovp_state(enabled=False)
+        self.psu.set_ocp_state(enabled=False)
         assert self.psu.get_status().ovp_ocp_enabled is False
-        self.psu.set_output_state(True)
+        self.psu.set_output_state(enabled=True)
         sleep(1)
-        assert self.psu.get_output_state() is True
+        assert self.psu.is_output_enabled()
         self.check_vi_in_range(self.TEST_CURRENT_HI_VOLTAGE, self.TEST_CURRENT_IDEAL)
-        self.psu.set_output_state(False)
+        self.psu.set_output_state(enabled=False)
 
         print(f"--- setup output current (low) = {self.TEST_CURRENT_LO:1.3f} A")
         self.psu.set_current_setpoint(self.TEST_CURRENT_LO)
         assert self.psu.get_current_setpoint().value == self.TEST_CURRENT_LO
 
         print("--- enable neither OVP or OCP")
-        self.psu.set_ovp_state(False)
-        self.psu.set_ocp_state(False)
+        self.psu.set_ovp_state(enabled=False)
+        self.psu.set_ocp_state(enabled=False)
         assert self.psu.get_status().ovp_ocp_enabled is False
-        self.psu.set_output_state(True)
+        self.psu.set_output_state(enabled=True)
         sleep(1)
-        assert self.psu.get_output_state() is True
+        assert self.psu.is_output_enabled()
         self.check_vi_in_range(self.TEST_CURRENT_LO_VOLTAGE, self.TEST_CURRENT_LO)
-        self.psu.set_output_state(False)
+        self.psu.set_output_state(enabled=False)
 
         print("--- enable OVP")
-        self.psu.set_ovp_state(True)
-        self.psu.set_ocp_state(False)
+        self.psu.set_ovp_state(enabled=True)
+        self.psu.set_ocp_state(enabled=False)
         assert self.psu.get_status().ovp_ocp_enabled is True
-        self.psu.set_output_state(True)
+        self.psu.set_output_state(enabled=True)
         sleep(1)
-        assert self.psu.get_output_state() is True
+        assert self.psu.is_output_enabled()
         self.check_vi_in_range(self.TEST_CURRENT_LO_VOLTAGE, self.TEST_CURRENT_LO)
-        self.psu.set_output_state(False)
+        self.psu.set_output_state(enabled=False)
 
         print("--- enable OCP")
-        self.psu.set_ovp_state(False)
-        self.psu.set_ocp_state(True)
+        self.psu.set_ovp_state(enabled=False)
+        self.psu.set_ocp_state(enabled=True)
         assert self.psu.get_status().ovp_ocp_enabled is True
-        self.psu.set_output_state(True)
+        self.psu.set_output_state(enabled=True)
         sleep(1)
-        assert self.psu.get_output_state() is False
+        assert self.psu.is_output_enabled() is False
         assert self.psu.get_output_voltage().value == 0
         assert self.psu.get_output_current().value == 0
 
         print("--- enable both")
-        self.psu.set_ovp_state(True)
-        self.psu.set_ocp_state(True)
+        self.psu.set_ovp_state(enabled=True)
+        self.psu.set_ocp_state(enabled=True)
         assert self.psu.get_status().ovp_ocp_enabled is True
-        self.psu.set_output_state(True)
+        self.psu.set_output_state(enabled=True)
         sleep(1)
-        assert self.psu.get_output_state() is False
+        assert self.psu.is_output_enabled() is False
         assert self.psu.get_output_voltage().value == 0
         assert self.psu.get_output_current().value == 0
