@@ -1,0 +1,46 @@
+[project]
+name = "aht-korad"
+version = "0.0.0"
+description = "Control utility for Korad / Tenma power supplies"
+url='https://gitlab.hyperion.space/hyperion/libraries/koradctl'
+authors = [
+    {name = "Attie Grande", email = "attie@attie.co.uk"},
+    {name = "Thibaud Chupin",email = "thibaud.chupin@aac-clydespace.com"},
+]
+license = "BSD-3-Clause"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyserial (>=3.5,<4.0)",
+    "pyvisa (>=1.14.1,<2.0.0)",
+    "pyvisa-py (>=0.7.2,<0.8.0)"
+]
+classifiers=[
+    'Development Status :: 4 - Beta',
+    'Environment :: Console',
+    'Intended Audience :: Manufacturing',
+    'Intended Audience :: Science/Research',
+    'Intended Audience :: System Administrators',
+    'License :: Freely Distributable',
+    'License :: OSI Approved :: BSD License',
+    'Natural Language :: English',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Programming Language :: Python',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Software Development :: Embedded Systems',
+    'Topic :: Utilities',
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry]
+packages = [{include = "koradctl"}]
+
+[tool.poetry.scripts]
+koradctl = "koradctl.__main__:cli"
+
+[tool.poetry-dynamic-versioning]
+enable = true
