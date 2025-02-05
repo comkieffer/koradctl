@@ -3,7 +3,6 @@ import importlib.util
 import pathlib
 import sys
 from time import sleep
-from typing import NoReturn
 
 from serial.serialutil import SerialException
 
@@ -61,17 +60,11 @@ class Cli:
             if serial is not None:
                 print(f"Serial Number: {serial}")
 
-        elif self.args.interactive:
-            self.run_interactive()
-        else:
-            self.run_noninteractive()
+        self.run_noninteractive()
 
     def run_tests(self) -> None:
         t = TestSuite(self.psu)
         t.run()
-
-    def run_interactive(self) -> NoReturn:
-        raise NotImplementedError
 
     def run_noninteractive(self) -> None:  # noqa: C901, PLR0912
         if not self.psu.is_tested():

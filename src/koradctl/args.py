@@ -28,14 +28,6 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-I",
-        "--interactive",
-        dest="interactive",
-        action="store_true",
-        default=False,
-        help="enable interactive mode",
-    )
-    parser.add_argument(
         "-t",
         "--test",
         dest="test",
