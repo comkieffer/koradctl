@@ -1,19 +1,4 @@
-import sys
-
-from serial.serialutil import SerialException
-
-from koradctl.cli import Cli
-
-
-def cli() -> None:
-    try:
-        cli_app = Cli()
-        cli_app.run()
-    except KeyboardInterrupt:
-        pass
-    except SerialException:
-        print("ERROR: The power supply appears to have gone away...", file=sys.stderr)
-
+from .cli import main
 
 if __name__ == "__main__":
-    cli()
+    main()
