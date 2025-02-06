@@ -22,18 +22,6 @@ if TYPE_CHECKING:
 # we impose a gap of at least ~50ms between commands
 INTER_COMMAND_DELAY = 0.05
 
-# Firmwares that have been tested with this library.
-#
-# Before adding a new firmware here, run `test.py` against it to make sure that it is
-# fully supported.
-#
-# If the power supply reports a serial number in its answer to `get_identity`, capture
-# it is a regex group so that `get_serial_number` can return it.
-tested_firmware = [
-    "TENMA 72-2540 V2.1",
-    re.compile(r"^TENMA 72-2540 V5.8 SN:(?P<serial_number>\d+)$"),
-]
-
 
 class Status(NamedTuple):
     output_enabled: bool
@@ -199,13 +187,15 @@ class PowerSupply:
 
     def get_serial_number(self) -> str | None:
         """Get the power supply's serial number if possible, otherwise return None."""
-        identity = self.get_identity()
-        for version in tested_firmware:
-            # We can only extract the serial number if the version is a regex.
-            if isinstance(version, re.Pattern) and (
-                match := version.fullmatch(identity)
-            ):
-                return match.group("serial_number")
+        from .factory import _get_power_supply_description
+
+        description = _get_power_supply_description(self.identity)
+        if description is not None and isinstance(description.matcher, re.Pattern):
+            match = description.matcher.fullmatch(self.identity)
+            if not match:
+                return None
+
+            return match.group("serial_number")
 
         return None
 
@@ -215,20 +205,12 @@ class PowerSupply:
 
         Check whether the connected power supply has been tested against
         this codebase... when adding new power supplies, please check
-        all commands and responses before adding to the tested_firmware
+        all commands and responses before adding to the TESTED_POWER_SUPPLIES
         list.
         """
-        for version in tested_firmware:
-            if isinstance(version, re.Pattern):
-                if version.fullmatch(self.identity):
-                    return True
-            elif isinstance(version, str):
-                if version == self.identity:
-                    return True
-            else:
-                raise TypeError("Unsupported type in 'tested_firmware'.")
+        from .factory import _get_power_supply_description
 
-        return False
+        return _get_power_supply_description(self.identity) is not None
 
     def get_status(self) -> Status:
         response = self.issue_command("STATUS?", allow_retry=True)
