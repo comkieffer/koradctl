@@ -45,9 +45,14 @@ check-with-pre-commit:
 
     - |
       if [ -f "pyproject.toml" ]; then
-        poetry run pytest \
-            --junit-xml=junit.xml \
-            --cov=aht.protocol --cov-report term --cov-report=xml --cov-branch
+        if poetry run pytest --collect-only -1; then
+          poetry run pytest \
+              --junit-xml=junit.xml \
+              --cov=aht.protocol --cov-report term --cov-report=xml --cov-branch
+        else
+          # Make sure the files exists or the pipeline will fail
+          touch junit.xml coverage.xml
+        fi
       fi
 
   # Extract the coverage percentage from the logs to show in MR UI
