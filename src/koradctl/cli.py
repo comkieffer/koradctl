@@ -61,6 +61,7 @@ def main(ctx: click.Context, port: str, baudrate: int) -> None:
 
 
 @main.command("set")
+@optgroup.option("-c", "--channel", default=1, type=int, help="The channel to control")
 @optgroup.group("Output Setup Options")
 @optgroup.option("-v", "--voltage", type=float, help="Set the output voltage")
 @optgroup.option("-i", "--current", type=float, help="Set the current limit")
@@ -81,6 +82,7 @@ def main(ctx: click.Context, port: str, baudrate: int) -> None:
 @pass_psu
 def set_state(  # noqa: PLR0913
     psu: PowerSupply,
+    channel: int,
     voltage: float | None,
     current: float | None,
     *,
@@ -101,14 +103,14 @@ def set_state(  # noqa: PLR0913
             print(f"OVP:     request: {on_off(ovp):-5s}")
 
         if voltage is not None:
-            psu.set_voltage_setpoint(voltage)
+            psu.set_voltage_setpoint(voltage, channel=channel)
             print(
                 f"Voltage: request: {voltage:2.2f}, "
                 f"result: {psu.get_voltage_setpoint().value:2.2f}"
             )
 
         if current is not None:
-            psu.set_current_setpoint(current)
+            psu.set_current_setpoint(current, channel=channel)
             print(
                 f"Current: request: {current:1.3f}, "
                 f"result: {psu.get_current_setpoint().value:1.3f}"
