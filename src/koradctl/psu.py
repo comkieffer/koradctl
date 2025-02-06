@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import re
 from datetime import datetime
 from functools import cached_property
 from time import sleep
-from typing import NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
-from serial import Serial
 from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from serial import Serial
 
 # i used the sigrok page for reference:
 #     https://sigrok.org/wiki/Korad_KAxxxxP_series
@@ -60,6 +64,36 @@ class Reading(NamedTuple):
 
     def __str__(self) -> str:
         return f"{self.value:.3f} {self.units}"
+
+
+class PowerSupplyChannel:
+    def __init__(self, parent: PowerSupply, channel: int) -> None:
+        self._parent = parent
+        self._channel = channel
+
+    def set_voltage_set_point(self, voltage: float) -> None:
+        self._parent.set_voltage_setpoint(voltage, channel=self._channel)
+
+    def get_voltage_set_point(self) -> Reading:
+        return self._parent.get_voltage_setpoint(channel=self._channel)
+
+    def get_output_voltage(self) -> Reading:
+        return self._parent.get_output_voltage(channel=self._channel)
+
+    def set_current_set_point(self, voltage: float) -> None:
+        self._parent.set_current_setpoint(voltage, channel=self._channel)
+
+    def get_current_set_point(self) -> Reading:
+        return self._parent.get_current_setpoint(channel=self._channel)
+
+    def get_output_current(self) -> Reading:
+        return self._parent.get_output_current(channel=self._channel)
+
+    def get_output_power(self) -> Reading:
+        return self._parent.get_output_power(channel=self._channel)
+
+    def get_output_reading(self) -> tuple[Reading, Reading, Reading]:
+        return self._parent.get_output_readings(channel=self._channel)
 
 
 class PowerSupply:
@@ -224,45 +258,61 @@ class PowerSupply:
     def set_ovp_state(self, *, enabled: bool) -> None:
         self.issue_command("OVP1" if enabled else "OVP0", wait_for_response=False)
 
-    def get_voltage_setpoint(self) -> Reading:
-        response = self.issue_command_trim("VSET1?", allow_retry=True)
+    def get_voltage_setpoint(self, *, channel: int = 1) -> Reading:
+        response = self.issue_command_trim(f"VSET{channel}?", allow_retry=True)
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
         return Reading(float(response), "V")
 
-    def set_voltage_setpoint(self, voltage: float) -> None:
-        self.issue_command(f"VSET1:{voltage:2.2f}", wait_for_response=False)
+    def set_voltage_setpoint(self, voltage: float, *, channel: int = 1) -> None:
+        self.issue_command(f"VSET{channel}:{voltage:2.2f}", wait_for_response=False)
 
-    def get_current_setpoint(self) -> Reading:
-        response = self.issue_command_trim("ISET1?", allow_retry=True)
+    def get_current_setpoint(self, *, channel: int = 1) -> Reading:
+        response = self.issue_command_trim(f"ISET{channel}?", allow_retry=True)
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
         return Reading(float(response), "I")
 
-    def set_current_setpoint(self, current: float) -> None:
-        self.issue_command(f"ISET1:{current:1.3f}", wait_for_response=False)
+    def set_current_setpoint(self, current: float, *, channel: int = 1) -> None:
+        self.issue_command(f"ISET{channel}:{current:1.3f}", wait_for_response=False)
 
-    def get_output_voltage(self) -> Reading:
-        response = self.issue_command_trim("VOUT1?", allow_retry=True)
+    def get_output_voltage(self, *, channel: int = 1) -> Reading:
+        response = self.issue_command_trim(f"VOUT{channel}?", allow_retry=True)
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
         return Reading(float(response), "V")
 
-    def get_output_current(self) -> Reading:
-        response = self.issue_command_trim("IOUT1?", allow_retry=True)
+    def get_output_current(self, *, channel: int = 1) -> Reading:
+        response = self.issue_command_trim(f"IOUT{channel}?", allow_retry=True)
         if response is None:
             raise RuntimeError("Powersupply failed to answer command.")
 
         return Reading(float(response), "I")
 
-    def get_output_power(self) -> Reading:
-        return self.get_output_readings()[2]
+    def get_output_power(self, *, channel: int = 1) -> Reading:
+        return self.get_output_readings(channel=channel)[2]
 
-    def get_output_readings(self) -> tuple[Reading, Reading, Reading]:
-        v = self.get_output_voltage()
-        i = self.get_output_current()
+    def get_output_readings(
+        self, *, channel: int = 1
+    ) -> tuple[Reading, Reading, Reading]:
+        v = self.get_output_voltage(channel=channel)
+        i = self.get_output_current(channel=channel)
         p = Reading(i.value * v.value, "W")
         return v, i, p
+
+
+class SingleChannelPowerSupply(PowerSupply):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.ch1 = PowerSupplyChannel(self, 1)
+
+
+class DualChannelPowerSupply(SingleChannelPowerSupply):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.ch2 = PowerSupplyChannel(self, 2)
